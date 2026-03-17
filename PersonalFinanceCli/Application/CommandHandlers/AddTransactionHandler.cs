@@ -65,45 +65,18 @@ public sealed class AddTransactionHandler(
     {
         if (cardId.HasValue)
         {
-            var byId = _cardRepository.GetById(cardId.Value);
-            if (byId == null)
-            {
-                throw new InvalidOperationException("Card not found.");
-            }
-
+            var byId = _cardRepository.GetById(cardId.Value) ?? throw new InvalidOperationException("Card not found.");
             return byId.Id;
         }
 
-        if (type == TransactionType.Expense)
-        {
-            var defaultByStore = _cardRepository.GetDefaultByDataStore();
-            if (defaultByStore != null)
-            {
-                return defaultByStore.Id;
-            }
+        return type == TransactionType.Expense
+            ? (_cardRepository.GetDefaultByDataStore()?.Id ?? GetFirstCardIdOrThrow())
+            : (_cardRepository.GetDefault()?.Id ?? GetFirstCardIdOrThrow());
+    }
 
-            var firstByStorePath = _cardRepository.GetFirst();
-            if (firstByStorePath != null)
-            {
-                return firstByStorePath.Id;
-            }
-
-            throw new InvalidOperationException("No cards available.");
-        }
-
-        var defaultByFlag = _cardRepository.GetDefault();
-        if (defaultByFlag != null)
-        {
-            return defaultByFlag.Id;
-        }
-
-        var firstByFlagPath = _cardRepository.GetFirst();
-        if (firstByFlagPath == null)
-        {
-            throw new InvalidOperationException("No cards available.");
-        }
-
-        return firstByFlagPath.Id;
+    private int GetFirstCardIdOrThrow()
+    {
+        return _cardRepository.GetFirst()?.Id ?? throw new InvalidOperationException("No cards available.");
     }
 
     public int ResolveCardId(int? cardId)
