@@ -25,22 +25,10 @@ public sealed class AddTransactionHandler(
         DateOnly? date,
         string? note)
     {
-        if (amount <= 0)
-        {
-            throw new InvalidOperationException("Amount must be > 0.");
-        }
-
-        if (string.IsNullOrWhiteSpace(category))
-        {
-            throw new InvalidOperationException("Category cannot be empty.");
-        }
+        Validate(amount, category);
 
         var resolvedCardId = EnsureCardSelectedFallback(cardId, type);
-        var selectedCard = _cardRepository.GetById(resolvedCardId);
-        if (selectedCard is null)
-        {
-            throw new InvalidOperationException("Card not found.");
-        }
+        EnsureCardExists(resolvedCardId);
 
         var trx = new Transaction
         {
@@ -53,6 +41,24 @@ public sealed class AddTransactionHandler(
         };
 
         return _transactionRepository.Add(trx);
+    }
+
+    private static void Validate(decimal amount, string category)
+    {
+        if (amount <= 0)
+        {
+            throw new InvalidOperationException("Amount must be > 0.");
+        }
+
+        if (string.IsNullOrWhiteSpace(category))
+        {
+            throw new InvalidOperationException("Category cannot be empty.");
+        }
+    }
+
+    private void EnsureCardExists(int cardId)
+    {
+        _ = _cardRepository.GetById(cardId) ?? throw new InvalidOperationException("Card not found.");
     }
 
     public int EnsureCardSelectedFallback(int? cardId, TransactionType type)
