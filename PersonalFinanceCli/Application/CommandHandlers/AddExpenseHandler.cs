@@ -14,7 +14,7 @@ public sealed class AddExpenseHandler(
     private readonly ICardRepository _cardRepository = cardRepository;
     private readonly IClock _clock = clock;
 
-    public Transaction Handle(decimal amount, string category, int? cardId, DateOnly? date, string? note)
+    private static void ValidateInput(decimal amount, string category)
     {
         if (amount <= 0)
         {
@@ -25,36 +25,31 @@ public sealed class AddExpenseHandler(
         {
             throw new InvalidOperationException("Category cannot be empty.");
         }
+    }
 
-        int resolvedCardId;
+    private int ResolveCardId(int? cardId)
+    {
         if (cardId.HasValue)
         {
-            var byId = _cardRepository.GetById(cardId.Value);
-            if (byId == null)
-            {
-                throw new InvalidOperationException("Card not found.");
-            }
-
-            resolvedCardId = byId.Id;
+            var byId = _cardRepository.GetById(cardId.Value) ?? throw new InvalidOperationException("Card not found.");
+            return byId.Id;
         }
-        else
+
+        var defaultByStore = _cardRepository.GetDefaultByDataStore();
+        if (defaultByStore != null)
         {
-            var defaultByStore = _cardRepository.GetDefaultByDataStore();
-            if (defaultByStore != null)
-            {
-                resolvedCardId = defaultByStore.Id;
-            }
-            else
-            {
-                var first = _cardRepository.GetFirst();
-                if (first == null)
-                {
-                    throw new InvalidOperationException("No cards available.");
-                }
-
-                resolvedCardId = first.Id;
-            }
+            return defaultByStore.Id;
         }
+
+        var first = _cardRepository.GetFirst() ?? throw new InvalidOperationException("No cards available.");
+        return first.Id;
+    }
+
+    public Transaction Handle(decimal amount, string category, int? cardId, DateOnly? date, string? note)
+    {
+        ValidateInput(amount, category);
+
+        int resolvedCardId = ResolveCardId(cardId);
 
         var trx = new Transaction
         {
