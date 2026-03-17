@@ -5,24 +5,17 @@ using PersonalFinanceCli.Infrastructure.Time;
 
 namespace PersonalFinanceCli.Application.CommandHandlers;
 
-public sealed class AddTransactionHandler
+public sealed class AddTransactionHandler(
+    ITransactionRepository transactionRepository,
+    ICardRepository cardRepository,
+    IClock clock)
 {
     public const string TransferToCushion = "Transfer to cushion";
     public const string TransferFromIncome = "Transfer from income";
 
-    private readonly ITransactionRepository _transactionRepository;
-    private readonly ICardRepository _cardRepository;
-    private readonly IClock _clock;
-
-    public AddTransactionHandler(
-        ITransactionRepository transactionRepository,
-        ICardRepository cardRepository,
-        IClock clock)
-    {
-        _transactionRepository = transactionRepository;
-        _cardRepository = cardRepository;
-        _clock = clock;
-    }
+    private readonly ITransactionRepository _transactionRepository = transactionRepository;
+    private readonly ICardRepository _cardRepository = cardRepository;
+    private readonly IClock _clock = clock;
 
     public Transaction Handle(
         TransactionType type,

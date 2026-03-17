@@ -2,14 +2,9 @@ using PersonalFinanceCli.Application.Repositories;
 
 namespace PersonalFinanceCli.Application.CommandHandlers;
 
-public sealed class SetDefaultCardHandler
+public sealed class SetDefaultCardHandler(ICardRepository cardRepository)
 {
-    private readonly ICardRepository _cardRepository;
-
-    public SetDefaultCardHandler(ICardRepository cardRepository)
-    {
-        _cardRepository = cardRepository;
-    }
+    private readonly ICardRepository _cardRepository = cardRepository;
 
     public void Handle(int cardId)
     {

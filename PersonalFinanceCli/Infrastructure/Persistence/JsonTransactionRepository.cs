@@ -3,14 +3,9 @@ using PersonalFinanceCli.Domain.Entities;
 
 namespace PersonalFinanceCli.Infrastructure.Persistence;
 
-public sealed class JsonTransactionRepository : ITransactionRepository
+public sealed class JsonTransactionRepository(JsonDataStore store) : ITransactionRepository
 {
-    private readonly JsonDataStore _store;
-
-    public JsonTransactionRepository(JsonDataStore store)
-    {
-        _store = store;
-    }
+    private readonly JsonDataStore _store = store;
 
     public IReadOnlyList<Transaction> GetAll()
     {

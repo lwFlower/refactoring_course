@@ -3,18 +3,11 @@ using PersonalFinanceCli.Infrastructure.Time;
 
 namespace PersonalFinanceCli.Application.CommandHandlers;
 
-public sealed class SetDailyLimitHandler
+public sealed class SetDailyLimitHandler(ILimitRepository limitRepository, ICardRepository cardRepository, IClock clock)
 {
-    private readonly ILimitRepository _limitRepository;
-    private readonly ICardRepository _cardRepository;
-    private readonly IClock _clock;
-
-    public SetDailyLimitHandler(ILimitRepository limitRepository, ICardRepository cardRepository, IClock clock)
-    {
-        _limitRepository = limitRepository;
-        _cardRepository = cardRepository;
-        _clock = clock;
-    }
+    private readonly ILimitRepository _limitRepository = limitRepository;
+    private readonly ICardRepository _cardRepository = cardRepository;
+    private readonly IClock _clock = clock;
 
     public void Handle(decimal amount)
     {

@@ -4,21 +4,14 @@ using PersonalFinanceCli.Domain.ValueObjects;
 
 namespace PersonalFinanceCli.Domain.Services;
 
-public sealed class DailyReportService
+public sealed class DailyReportService(
+    ICardRepository cardRepository,
+    ITransactionRepository transactionRepository,
+    ILimitRepository limitRepository)
 {
-    private readonly ICardRepository _cardRepository;
-    private readonly ITransactionRepository _transactionRepository;
-    private readonly ILimitRepository _limitRepository;
-
-    public DailyReportService(
-        ICardRepository cardRepository,
-        ITransactionRepository transactionRepository,
-        ILimitRepository limitRepository)
-    {
-        _cardRepository = cardRepository;
-        _transactionRepository = transactionRepository;
-        _limitRepository = limitRepository;
-    }
+    private readonly ICardRepository _cardRepository = cardRepository;
+    private readonly ITransactionRepository _transactionRepository = transactionRepository;
+    private readonly ILimitRepository _limitRepository = limitRepository;
 
     public DailyReport Generate(DateOnly date)
     {

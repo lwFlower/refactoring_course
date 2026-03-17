@@ -3,14 +3,9 @@ using PersonalFinanceCli.Domain.ValueObjects;
 
 namespace PersonalFinanceCli.Application.CommandHandlers;
 
-public sealed class AddIncomeHandler
+public sealed class AddIncomeHandler(AddTransactionHandler addTransactionHandler)
 {
-    private readonly AddTransactionHandler _addTransactionHandler;
-
-    public AddIncomeHandler(AddTransactionHandler addTransactionHandler)
-    {
-        _addTransactionHandler = addTransactionHandler;
-    }
+    private readonly AddTransactionHandler _addTransactionHandler = addTransactionHandler;
 
     public Transaction Handle(decimal amount, string category, int? cardId, DateOnly? date, string? note)
     {

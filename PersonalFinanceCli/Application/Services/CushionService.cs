@@ -4,17 +4,12 @@ using PersonalFinanceCli.Domain.ValueObjects;
 
 namespace PersonalFinanceCli.Application.Services;
 
-public sealed class CushionService
+public sealed class CushionService(ICardRepository cardRepository)
 {
     public const string TransferToCushionCategory = "Transfer to cushion";
     public const string TransferFromIncomeCategory = "Transfer from income";
 
-    private readonly ICardRepository _cardRepository;
-
-    public CushionService(ICardRepository cardRepository)
-    {
-        _cardRepository = cardRepository;
-    }
+    private readonly ICardRepository _cardRepository = cardRepository;
 
     public Card? FindCushionByName()
     {
