@@ -4,14 +4,9 @@ using PersonalFinanceCli.Domain.ValueObjects;
 
 namespace PersonalFinanceCli.Application.CommandHandlers;
 
-public sealed class AddCardHandler
+public sealed class AddCardHandler(ICardRepository cardRepository)
 {
-    private readonly ICardRepository _cardRepository;
-
-    public AddCardHandler(ICardRepository cardRepository)
-    {
-        _cardRepository = cardRepository;
-    }
+    private readonly ICardRepository _cardRepository = cardRepository;
 
     public Card Handle(string name, string currencyRaw, decimal? initialBalance)
     {
