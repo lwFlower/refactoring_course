@@ -106,24 +106,36 @@ public sealed class AddTransactionHandler(
     {
         var transferDate = date ?? _clock.Today;
 
-        _transactionRepository.Add(new Transaction
-        {
-            CardId = fromCardId,
-            Amount = amount,
-            Category = TransferToCushion,
-            Date = transferDate,
-            Note = "auto",
-            Type = TransactionType.Expense
-        });
+        _transactionRepository.Add(CreateTransferTransaction(
+            fromCardId,
+            amount,
+            TransferToCushion,
+            transferDate,
+            TransactionType.Expense));
 
-        _transactionRepository.Add(new Transaction
+        _transactionRepository.Add(CreateTransferTransaction(
+            cushionCardId,
+            amount,
+            TransferFromIncome,
+            transferDate,
+            TransactionType.Income));
+    }
+
+    private static Transaction CreateTransferTransaction(
+        int cardId,
+        decimal amount,
+        string category,
+        DateOnly date,
+        TransactionType type)
+    {
+        return new Transaction
         {
-            CardId = cushionCardId,
+            CardId = cardId,
             Amount = amount,
-            Category = TransferFromIncome,
-            Date = transferDate,
+            Category = category,
+            Date = date,
             Note = "auto",
-            Type = TransactionType.Income
-        });
+            Type = type
+        };
     }
 }
