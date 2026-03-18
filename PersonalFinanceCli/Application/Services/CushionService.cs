@@ -8,8 +8,19 @@ public sealed class CushionService(ICardRepository cardRepository)
 {
     public const string TransferToCushionCategory = "Transfer to cushion";
     public const string TransferFromIncomeCategory = "Transfer from income";
+    private const string CushionFullName = "Финансовая подушка";
+    private const string CushionKeyword = "подушка";
 
     private readonly ICardRepository _cardRepository = cardRepository;
+
+    public Card? FindCushion()
+    {
+        var cards = _cardRepository.GetAll();
+
+        return cards.FirstOrDefault(c => c.Name == CushionFullName)
+            ?? cards.FirstOrDefault(c => c.IsCushion)
+            ?? cards.FirstOrDefault(c => c.Name.Contains(CushionKeyword, StringComparison.OrdinalIgnoreCase));
+    }
 
     public Card? FindCushionByName()
     {
@@ -25,7 +36,7 @@ public sealed class CushionService(ICardRepository cardRepository)
 
     public Card CreateCushion(Currency currency)
     {
-        var existing = FindCushionByName();
+        var existing = FindCushion();
         if (existing != null)
         {
             return existing;
@@ -33,7 +44,7 @@ public sealed class CushionService(ICardRepository cardRepository)
 
         return _cardRepository.Add(new Card
         {
-            Name = "Финансовая подушка",
+            Name = CushionFullName,
             Currency = currency,
             InitialBalance = 0m,
             IsDefault = false,
@@ -51,6 +62,8 @@ public sealed class CushionService(ICardRepository cardRepository)
         return Floor2(incomeAmount * rate);
     }
 
+    //TODO: как будто бы Floor2 не связан напрямую с cushion, в своём проекте вынесла бы в utils
+    //Но тут оставляю, т.к. не разбираюсь сильно в архитектуре проектов C#
     public static decimal Floor2(decimal value)
     {
         return Math.Floor(value * 100m) / 100m;
