@@ -6,8 +6,6 @@ namespace PersonalFinanceCli.Application.Services;
 
 public sealed class CushionService(ICardRepository cardRepository)
 {
-    public const string TransferToCushionCategory = "Transfer to cushion";
-    public const string TransferFromIncomeCategory = "Transfer from income";
     private const string CushionFullName = "Финансовая подушка";
     private const string CushionKeyword = "подушка";
 
