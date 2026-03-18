@@ -45,24 +45,10 @@ public sealed class CushionService(ICardRepository cardRepository)
     {
         var hasSalaryWord = category.Contains("Зарплата", StringComparison.OrdinalIgnoreCase);
 
-        if (incomeAmount < 10m)
-        {
-            if (hasSalaryWord)
-            {
-                return 1m;
-            }
+        if (incomeAmount < 10m) return 1m;
 
-            return 1m;
-        }
-        else
-        {
-            if (hasSalaryWord)
-            {
-                return Floor2(incomeAmount * 0.20m);
-            }
-
-            return Floor2(incomeAmount * 0.10m);
-        }
+        var rate = hasSalaryWord ? 0.20m : 0.10m;
+        return Floor2(incomeAmount * rate);
     }
 
     public static decimal Floor2(decimal value)
