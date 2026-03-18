@@ -27,27 +27,27 @@ public sealed class DailyReportService(
         decimal expense = 0m;
         var categoryTotals = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var t in allTransactions)
+        foreach (var transaction in allTransactions)
         {
-            if (!cardIds.Contains(t.CardId) || t.Date != date)
+            if (!cardIds.Contains(transaction.CardId) || transaction.Date != date)
             {
                 continue;
             }
 
-            if (t.Type == TransactionType.Income)
+            if (transaction.Type == TransactionType.Income)
             {
-                income += t.Amount;
+                income += transaction.Amount;
             }
             else
             {
-                expense += t.Amount;
-                if (categoryTotals.ContainsKey(t.Category))
+                expense += transaction.Amount;
+                if (categoryTotals.ContainsKey(transaction.Category))
                 {
-                    categoryTotals[t.Category] += t.Amount;
+                    categoryTotals[transaction.Category] += transaction.Amount;
                 }
                 else
                 {
-                    categoryTotals[t.Category] = t.Amount;
+                    categoryTotals[transaction.Category] = transaction.Amount;
                 }
             }
         }
@@ -68,15 +68,15 @@ public sealed class DailyReportService(
         foreach (var card in cards)
         {
             decimal balance = card.InitialBalance;
-            foreach (var trx in allTransactions.Where(x => x.CardId == card.Id))
+            foreach (var transaction in allTransactions.Where(x => x.CardId == card.Id))
             {
-                if (trx.Type == TransactionType.Income)
+                if (transaction.Type == TransactionType.Income)
                 {
-                    balance += trx.Amount;
+                    balance += transaction.Amount;
                 }
                 else
                 {
-                    balance -= trx.Amount;
+                    balance -= transaction.Amount;
                 }
             }
 
