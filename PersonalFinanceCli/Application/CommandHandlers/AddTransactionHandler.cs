@@ -5,24 +5,17 @@ using PersonalFinanceCli.Infrastructure.Time;
 
 namespace PersonalFinanceCli.Application.CommandHandlers;
 
-public sealed class AddTransactionHandler
+public sealed class AddTransactionHandler(
+    ITransactionRepository transactionRepository,
+    ICardRepository cardRepository,
+    IClock clock)
 {
     public const string TransferToCushion = "Transfer to cushion";
     public const string TransferFromIncome = "Transfer from income";
 
-    private readonly ITransactionRepository _transactionRepository;
-    private readonly ICardRepository _cardRepository;
-    private readonly IClock _clock;
-
-    public AddTransactionHandler(
-        ITransactionRepository transactionRepository,
-        ICardRepository cardRepository,
-        IClock clock)
-    {
-        _transactionRepository = transactionRepository;
-        _cardRepository = cardRepository;
-        _clock = clock;
-    }
+    private readonly ITransactionRepository _transactionRepository = transactionRepository;
+    private readonly ICardRepository _cardRepository = cardRepository;
+    private readonly IClock _clock = clock;
 
     public Transaction Handle(
         TransactionType type,
@@ -32,22 +25,10 @@ public sealed class AddTransactionHandler
         DateOnly? date,
         string? note)
     {
-        if (amount <= 0)
-        {
-            throw new InvalidOperationException("Amount must be > 0.");
-        }
-
-        if (string.IsNullOrWhiteSpace(category))
-        {
-            throw new InvalidOperationException("Category cannot be empty.");
-        }
+        Validate(amount, category);
 
         var resolvedCardId = EnsureCardSelectedFallback(cardId, type);
-        var selectedCard = _cardRepository.GetById(resolvedCardId);
-        if (selectedCard is null)
-        {
-            throw new InvalidOperationException("Card not found.");
-        }
+        EnsureCardExists(resolvedCardId);
 
         var trx = new Transaction
         {
@@ -62,49 +43,40 @@ public sealed class AddTransactionHandler
         return _transactionRepository.Add(trx);
     }
 
+    private static void Validate(decimal amount, string category)
+    {
+        if (amount <= 0)
+        {
+            throw new InvalidOperationException("Amount must be > 0.");
+        }
+
+        if (string.IsNullOrWhiteSpace(category))
+        {
+            throw new InvalidOperationException("Category cannot be empty.");
+        }
+    }
+
+    private void EnsureCardExists(int cardId)
+    {
+        _ = _cardRepository.GetById(cardId) ?? throw new InvalidOperationException("Card not found.");
+    }
+
     public int EnsureCardSelectedFallback(int? cardId, TransactionType type)
     {
         if (cardId.HasValue)
         {
-            var byId = _cardRepository.GetById(cardId.Value);
-            if (byId == null)
-            {
-                throw new InvalidOperationException("Card not found.");
-            }
-
+            var byId = _cardRepository.GetById(cardId.Value) ?? throw new InvalidOperationException("Card not found.");
             return byId.Id;
         }
 
-        if (type == TransactionType.Expense)
-        {
-            var defaultByStore = _cardRepository.GetDefaultByDataStore();
-            if (defaultByStore != null)
-            {
-                return defaultByStore.Id;
-            }
+        return type == TransactionType.Expense
+            ? (_cardRepository.GetDefaultByDataStore()?.Id ?? GetFirstCardIdOrThrow())
+            : (_cardRepository.GetDefault()?.Id ?? GetFirstCardIdOrThrow());
+    }
 
-            var firstByStorePath = _cardRepository.GetFirst();
-            if (firstByStorePath != null)
-            {
-                return firstByStorePath.Id;
-            }
-
-            throw new InvalidOperationException("No cards available.");
-        }
-
-        var defaultByFlag = _cardRepository.GetDefault();
-        if (defaultByFlag != null)
-        {
-            return defaultByFlag.Id;
-        }
-
-        var firstByFlagPath = _cardRepository.GetFirst();
-        if (firstByFlagPath == null)
-        {
-            throw new InvalidOperationException("No cards available.");
-        }
-
-        return firstByFlagPath.Id;
+    private int GetFirstCardIdOrThrow()
+    {
+        return _cardRepository.GetFirst()?.Id ?? throw new InvalidOperationException("No cards available.");
     }
 
     public int ResolveCardId(int? cardId)
@@ -134,24 +106,36 @@ public sealed class AddTransactionHandler
     {
         var transferDate = date ?? _clock.Today;
 
-        _transactionRepository.Add(new Transaction
-        {
-            CardId = fromCardId,
-            Amount = amount,
-            Category = TransferToCushion,
-            Date = transferDate,
-            Note = "auto",
-            Type = TransactionType.Expense
-        });
+        _transactionRepository.Add(CreateTransferTransaction(
+            fromCardId,
+            amount,
+            TransferToCushion,
+            transferDate,
+            TransactionType.Expense));
 
-        _transactionRepository.Add(new Transaction
+        _transactionRepository.Add(CreateTransferTransaction(
+            cushionCardId,
+            amount,
+            TransferFromIncome,
+            transferDate,
+            TransactionType.Income));
+    }
+
+    private static Transaction CreateTransferTransaction(
+        int cardId,
+        decimal amount,
+        string category,
+        DateOnly date,
+        TransactionType type)
+    {
+        return new Transaction
         {
-            CardId = cushionCardId,
+            CardId = cardId,
             Amount = amount,
-            Category = TransferFromIncome,
-            Date = transferDate,
+            Category = category,
+            Date = date,
             Note = "auto",
-            Type = TransactionType.Income
-        });
+            Type = type
+        };
     }
 }

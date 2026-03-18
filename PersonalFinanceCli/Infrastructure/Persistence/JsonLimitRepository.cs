@@ -4,14 +4,9 @@ using PersonalFinanceCli.Domain.ValueObjects;
 
 namespace PersonalFinanceCli.Infrastructure.Persistence;
 
-public sealed class JsonLimitRepository : ILimitRepository
+public sealed class JsonLimitRepository(JsonDataStore store) : ILimitRepository
 {
-    private readonly JsonDataStore _store;
-
-    public JsonLimitRepository(JsonDataStore store)
-    {
-        _store = store;
-    }
+    private readonly JsonDataStore _store = store;
 
     public DailyLimit? GetByDate(DateOnly date)
     {

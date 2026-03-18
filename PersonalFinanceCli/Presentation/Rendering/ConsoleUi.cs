@@ -136,9 +136,7 @@ public sealed class ConsoleUi
         _onboardingChecked = true;
 
         var hasSeen = _onboardingStateRepository.GetHasSeenOnboarding();
-        var cushion = _cushionService.FindCushionByName()
-            ?? _addTransactionHandler.FindCushionCardLoose()
-            ?? _cushionService.FindCushionByContains();
+        var cushion = _cushionService.FindCushion();
         if (cushion != null)
         {
             _onboardingStateRepository.SetLastCushionDeclinedDate(null);
@@ -347,9 +345,7 @@ public sealed class ConsoleUi
             return;
         }
 
-        var cushion = _cushionService.FindCushionByName()
-            ?? _addTransactionHandler.FindCushionCardLoose()
-            ?? _cushionService.FindCushionByContains();
+        var cushion = _cushionService.FindCushion();
 
         if (cushion == null)
         {

@@ -4,93 +4,91 @@ using PersonalFinanceCli.Domain.ValueObjects;
 
 namespace PersonalFinanceCli.Domain.Services;
 
-public sealed class DailyReportService
+public sealed class DailyReportService(
+    ICardRepository cardRepository,
+    ITransactionRepository transactionRepository,
+    ILimitRepository limitRepository)
 {
-    private readonly ICardRepository _cardRepository;
-    private readonly ITransactionRepository _transactionRepository;
-    private readonly ILimitRepository _limitRepository;
-
-    public DailyReportService(
-        ICardRepository cardRepository,
-        ITransactionRepository transactionRepository,
-        ILimitRepository limitRepository)
-    {
-        _cardRepository = cardRepository;
-        _transactionRepository = transactionRepository;
-        _limitRepository = limitRepository;
-    }
+    private readonly ICardRepository _cardRepository = cardRepository;
+    private readonly ITransactionRepository _transactionRepository = transactionRepository;
+    private readonly ILimitRepository _limitRepository = limitRepository;
 
     public DailyReport Generate(DateOnly date)
     {
         var cards = _cardRepository.GetAll();
-        var currency = cards.FirstOrDefault(c => c.IsDefault)?.Currency
-            ?? cards.FirstOrDefault()?.Currency
-            ?? Currency.RUB;
-
-        var cardIds = cards.Where(c => c.Currency == currency).Select(c => c.Id).ToHashSet();
         var allTransactions = _transactionRepository.GetAll();
 
+        var currency = GetReportCurrency(cards);
+        var targetCardIds = cards.Where(c => c.Currency == currency).Select(c => c.Id).ToHashSet();
+
+        var (income, expense, categoryTotals) = CalculateDailyStats(allTransactions, targetCardIds, date);
+
+        var limit = _limitRepository.GetByDate(date);
+
+        var balances = CalculateBalances(cards, allTransactions);
+
+        return new DailyReport(date, currency, income, expense, categoryTotals, balances, limit);
+    }
+
+    private Currency GetReportCurrency(IEnumerable<Card> cards)
+    {
+        return cards.FirstOrDefault(c => c.IsDefault)?.Currency
+            ?? cards.FirstOrDefault()?.Currency
+            ?? Currency.RUB;
+    }
+
+    private (decimal Income, decimal Expense, Dictionary<string, decimal> CategoryTotals) CalculateDailyStats(
+        IEnumerable<Transaction> transactions, 
+        HashSet<int> cardIds,
+        DateOnly date)
+    {
         decimal income = 0m;
         decimal expense = 0m;
         var categoryTotals = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var t in allTransactions)
-        {
-            if (!cardIds.Contains(t.CardId) || t.Date != date)
-            {
-                continue;
-            }
+        var dailyTransactions = transactions.Where(t => t.Date == date && cardIds.Contains(t.CardId));
 
-            if (t.Type == TransactionType.Income)
+        foreach (var transaction in dailyTransactions)
+        {
+            if (transaction.Type == TransactionType.Income)
             {
-                income += t.Amount;
+                income += transaction.Amount;
             }
-            else
+            else 
             {
-                expense += t.Amount;
-                if (categoryTotals.ContainsKey(t.Category))
-                {
-                    categoryTotals[t.Category] += t.Amount;
-                }
-                else
-                {
-                    categoryTotals[t.Category] = t.Amount;
-                }
+                expense += transaction.Amount;
+                
+                var currentTotal = categoryTotals.GetValueOrDefault(transaction.Category);
+                categoryTotals[transaction.Category] = currentTotal + transaction.Amount;
             }
         }
 
-        var limit = _limitRepository.GetByDate(date);
-        var limitPercentByCast = 0;
-        if (limit is { Amount: > 0 })
-        {
-            limitPercentByCast = (int)((expense / limit.Amount) * 100m);
-        }
+        return (income, expense, categoryTotals);
+    }
 
-        if (limitPercentByCast < 0)
+    private List<CardBalanceLine> CalculateBalances(IEnumerable<Card> cards, IEnumerable<Transaction> allTransactions)
+    {
+        var balanceChanges = new Dictionary<int, decimal>(); 
+        
+        foreach (var transaction in allTransactions)
         {
-            limitPercentByCast = 0;
+            var amount = transaction.Type == TransactionType.Income 
+                ? transaction.Amount 
+                : -transaction.Amount;
+
+            var currentChange = balanceChanges.GetValueOrDefault(transaction.CardId);
+            balanceChanges[transaction.CardId] = currentChange + amount;
         }
 
         var balances = new List<CardBalanceLine>();
         foreach (var card in cards)
         {
-            decimal balance = card.InitialBalance;
-            foreach (var trx in allTransactions.Where(x => x.CardId == card.Id))
-            {
-                if (trx.Type == TransactionType.Income)
-                {
-                    balance += trx.Amount;
-                }
-                else
-                {
-                    balance -= trx.Amount;
-                }
-            }
-
-            balances.Add(new CardBalanceLine(card.Id, card.Name, card.IsDefault, balance, card.Currency));
+            var finalBalance = card.InitialBalance + balanceChanges.GetValueOrDefault(card.Id);
+            
+            balances.Add(new CardBalanceLine(card.Id, card.Name, card.IsDefault, finalBalance, card.Currency));
         }
 
-        return new DailyReport(date, currency, income, expense, categoryTotals, balances, limit);
+        return balances;
     }
 }
 

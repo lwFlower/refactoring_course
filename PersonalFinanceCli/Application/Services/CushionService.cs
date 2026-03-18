@@ -4,16 +4,20 @@ using PersonalFinanceCli.Domain.ValueObjects;
 
 namespace PersonalFinanceCli.Application.Services;
 
-public sealed class CushionService
+public sealed class CushionService(ICardRepository cardRepository)
 {
-    public const string TransferToCushionCategory = "Transfer to cushion";
-    public const string TransferFromIncomeCategory = "Transfer from income";
+    private const string CushionFullName = "Финансовая подушка";
+    private const string CushionKeyword = "подушка";
 
-    private readonly ICardRepository _cardRepository;
+    private readonly ICardRepository _cardRepository = cardRepository;
 
-    public CushionService(ICardRepository cardRepository)
+    public Card? FindCushion()
     {
-        _cardRepository = cardRepository;
+        var cards = _cardRepository.GetAll();
+
+        return cards.FirstOrDefault(c => c.Name == CushionFullName)
+            ?? cards.FirstOrDefault(c => c.IsCushion)
+            ?? cards.FirstOrDefault(c => c.Name.Contains(CushionKeyword, StringComparison.OrdinalIgnoreCase));
     }
 
     public Card? FindCushionByName()
@@ -30,7 +34,7 @@ public sealed class CushionService
 
     public Card CreateCushion(Currency currency)
     {
-        var existing = FindCushionByName();
+        var existing = FindCushion();
         if (existing != null)
         {
             return existing;
@@ -38,7 +42,7 @@ public sealed class CushionService
 
         return _cardRepository.Add(new Card
         {
-            Name = "Финансовая подушка",
+            Name = CushionFullName,
             Currency = currency,
             InitialBalance = 0m,
             IsDefault = false,
@@ -50,26 +54,14 @@ public sealed class CushionService
     {
         var hasSalaryWord = category.Contains("Зарплата", StringComparison.OrdinalIgnoreCase);
 
-        if (incomeAmount < 10m)
-        {
-            if (hasSalaryWord)
-            {
-                return 1m;
-            }
+        if (incomeAmount < 10m) return 1m;
 
-            return 1m;
-        }
-        else
-        {
-            if (hasSalaryWord)
-            {
-                return Floor2(incomeAmount * 0.20m);
-            }
-
-            return Floor2(incomeAmount * 0.10m);
-        }
+        var rate = hasSalaryWord ? 0.20m : 0.10m;
+        return Floor2(incomeAmount * rate);
     }
 
+    //TODO: как будто бы Floor2 не связан напрямую с cushion, в своём проекте вынесла бы в utils
+    //Но тут оставляю, т.к. не разбираюсь сильно в архитектуре проектов C#
     public static decimal Floor2(decimal value)
     {
         return Math.Floor(value * 100m) / 100m;

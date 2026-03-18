@@ -4,16 +4,11 @@ using PersonalFinanceCli.Domain.ValueObjects;
 
 namespace PersonalFinanceCli.Application.CommandHandlers;
 
-public sealed class AddCardHandler
+public sealed class AddCardHandler(ICardRepository cardRepository)
 {
-    private readonly ICardRepository _cardRepository;
+    private readonly ICardRepository _cardRepository = cardRepository;
 
-    public AddCardHandler(ICardRepository cardRepository)
-    {
-        _cardRepository = cardRepository;
-    }
-
-    public Card Handle(string name, string currencyRaw, decimal? initialBalance)
+    private static Currency ValidateAndParse(string name, string currencyRaw)
     {
         if (string.IsNullOrWhiteSpace(name))
         {
@@ -24,6 +19,13 @@ public sealed class AddCardHandler
         {
             throw new InvalidOperationException("Unknown currency. Allowed: RUB, EUR.");
         }
+
+        return currency;
+    }
+
+    public Card Handle(string name, string currencyRaw, decimal? initialBalance)
+    {
+        Currency currency = ValidateAndParse(name, currencyRaw);
 
         var card = new Card
         {
